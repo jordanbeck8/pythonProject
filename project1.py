@@ -56,7 +56,7 @@ class Hotel(DBbase):
     def search_reservation(self):
         reserved = int(input("Enter your Reservation ID: "))
         self.get_cursor.execute("""
-                                SELECT r.id AS room_id, r.room_type 
+                                SELECT res.first_name, res.last_name, r.room_type, b.check_in, b.check_out
                                 FROM reservations res
                                 JOIN bookings b ON res.booking_id = b.id
                                 JOIN rooms r ON b.room_type = r.room_type 
@@ -64,12 +64,12 @@ class Hotel(DBbase):
                                 """, (reserved,))
         
         results = self.get_cursor.fetchall()
-        
         if results:
             for row in results:
-                print(f"Room ID: {row[0]}, Room Type: {row[1]}")
+                print(f"\nReservation Name: {row[0]} {row[1]}\nRoom Type: {row[2]}\nCheck-In Date:{row[3]}\nCheck-Out Date:{row[4]}\n")
         else:
             print("No reservations found for that ID.")
+
 
     def delete_reservation(self):
         reserved = int(input("Enter your Reservation ID: "))
@@ -77,14 +77,53 @@ class Hotel(DBbase):
             DELETE FROM reservations 
             WHERE reservation_id = ?;
         """, (reserved,))
-
         self.get_connection.commit()
         if self.get_cursor.rowcount > 0:
             print(f"Reservation ID {reserved} has been deleted.")
         else:
-            print("No reservation found with that ID.")
+            print("That reservation was not found, please ensure accuracy")
 
+    def update_reservation(self):
+        reserved = int(input("Enter your Reservation ID: "))
+        
+        self.get_cursor.execute("SELECT * FROM reservations WHERE reservation_id = ?", (reserved,))
+        if self.get_cursor.fetchone():
+            print(f"Reservation ID {reserved} is available to update.")
+            
+            new_room_type = input("Enter the room you would like to book: ")
+            new_check_in = input("Enter new check-in date (YYYY-MM-DD): ")
+            new_check_out = input("Enter new check-out date (YYYY-MM-DD): ")
+            
+            self.get_cursor.execute("""
+                                    UPDATE bookings
+                                    SET check_in = ?, check_out = ?
+                                    WHERE id = (SELECT booking_id FROM reservations WHERE reservation_id = ?);
+                                    """, (new_check_in, new_check_out, reserved))
+            
+            if self.get_cursor.rowcount > 0:
+                self.get_connection.commit()
+                print(f"Reservation ID {reserved} has been successfully updated.")
+            else:
+                print("Failed to update reservation; please try again.")
+        else:
+            print("That reservation was not found, please ensure accuracy.")
 
+    def welcome(self):
+            print("="*25)
+            print("Welcome to the Grand Py Hotel!!")
+            print("Please select from the menu below by typing the number of the prompt")
+            response = int(input(f"\n1. Book a Room\n2. Search for a previous reservation\n3. Update a previous reservation\n4. Delete a previous reservation\n: "))
+            if response == 1:
+                hotel_db.booking_room()
+            elif response == 2:
+                hotel_db.search_reservation()
+            elif response == 3:
+                hotel_db.update_reservation()
+            elif response == 4:
+                hotel_db.delete_reservation()
+            else:
+                print(f"Please enter one of the following options: 1 (Book), 2 (Search), 3 (Update), 4 (Delete)\n")
+                return
 
     #pulls open rooms (used in booking and in initial availability display)
     def load_rooms(self):
@@ -151,7 +190,7 @@ class Hotel(DBbase):
                 print(f"{room_type} Rooms: 0 available, Rate: ${rate:.2f}/night")
             print("=" * 47)
 
-    #functionality used in the next method after booking is confirmed
+    #functionality after booking is confirmed
     def print_receipt(self, name, reservation_id, room_type, check_in, check_out, total_cost):
         print("\nReceipt:")
         print(f"Name: {name}")
@@ -195,7 +234,6 @@ class Hotel(DBbase):
                                                 (room_type, check_in, check_out_date.strftime("%Y-%m-%d")))
                         self.get_connection.commit()
                         booking_id = self.get_cursor.lastrowid
-
                         print(f"\nBooking successful! The {room_type} room has been booked from {check_in} to {check_out_date.strftime('%Y-%m-%d')}.")
                         print(f"Your total cost will be: ${total_cost:.2f}")
 
@@ -206,13 +244,12 @@ class Hotel(DBbase):
                         DOB = input("Enter your date of birth (YYYY-MM-DD): ")
                         DOB = datetime.datetime.strptime(DOB, "%Y-%m-%d").date()
 
-                        # Add reservation to the reservations table
+                        #add reservation to the reservations table
                         self.get_cursor.execute("""
                             INSERT INTO reservations (booking_id, last_name, first_name, DOB, zip) 
                             VALUES (?, ?, ?, ?, ?)
                         """, (booking_id, last_name, first_name, DOB, zip))
                         self.get_connection.commit()
-
                         print(f"Reservation created for {first_name} {last_name}.")
                         receipt_request = input("Would you like a receipt? (Y/N): ").lower()
                         if receipt_request == 'y':
@@ -240,14 +277,13 @@ class Hotel(DBbase):
                                                     (room_type, next_available_date, check_out_date.strftime("%Y-%m-%d")))
                             self.get_connection.commit()
                             booking_id = self.get_cursor.lastrowid
-
                             first_name = input("Enter your first name: ")
                             last_name = input("Enter your last name: ")
                             zip = int(input("Enter your billing ZIP code: "))
                             DOB = input("Enter your date of birth (YYYY-MM-DD): ")
                             DOB = datetime.datetime.strptime(DOB, "%Y-%m-%d").date()
 
-                            # Insert reservation into reservations table
+                            #insert reservation into reservations table
                             self.get_cursor.execute("""
                                 INSERT INTO reservations (booking_id, last_name, first_name, DOB, zip) 
                                 VALUES (?, ?, ?, ?, ?)
@@ -268,7 +304,7 @@ class Hotel(DBbase):
                         
 
 
-#Execution flow is as follows:
+#EXECUTION FLOW IS AS FOLLOWS:
     #create database file (doesn't need to be commented out after running the first time)
     #populates file with simulated bookings [leaving 10 rooms of each type open]
     #checks database for what rooms are available and print to console
@@ -278,5 +314,5 @@ class Hotel(DBbase):
 hotel_db = Hotel('hotel_bookings.db')
 populate_bookings('hotel_bookings.db')
 hotel_db.available_rooms()
-hotel_db.booking_room()
+hotel_db.welcome()
 hotel_db.close_db()
