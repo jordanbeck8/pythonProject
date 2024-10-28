@@ -109,8 +109,9 @@ class Hotel(DBbase):
             print("That reservation was not found, please ensure accuracy.")
 
     def welcome(self):
-            print("="*25)
+            print("="*50)
             print("Welcome to the Grand Py Hotel!!")
+            print("="*50)
             print("Please select from the menu below by typing the number of the prompt")
             response = int(input(f"\n1. Book a Room\n2. Search for a previous reservation\n3. Update a previous reservation\n4. Delete a previous reservation\n: "))
             if response == 1:
@@ -175,9 +176,9 @@ class Hotel(DBbase):
 
     #basic gui to make the program pretty for the user in terminal
     def available_rooms(self):
-        print("-" * 16)
+        print("-" * 50)
         print("Available Rooms Today: ")
-        print("=" * 47)
+        print("=" * 50)
         #ensures that the rooms displayed are accurate to today's date
         today = datetime.datetime.now().strftime("%Y-%m-%d")
         self.get_cursor.execute("SELECT room_type, available, rate FROM rooms")
@@ -188,7 +189,7 @@ class Hotel(DBbase):
                 print(f"{room_type}: {available} available, Rate: ${rate:.2f}/night")
             else:
                 print(f"{room_type} Rooms: 0 available, Rate: ${rate:.2f}/night")
-            print("=" * 47)
+            print("=" * 45)
 
     #functionality after booking is confirmed
     def print_receipt(self, name, reservation_id, room_type, check_in, check_out, total_cost):
@@ -201,6 +202,7 @@ class Hotel(DBbase):
         print(f"Total Cost: ${total_cost:.2f}")
 
     def booking_room(self):
+        hotel_db.available_rooms()
         while True:
             room_type = input("Which room do you want?: ").upper()
             nights = int(input("How many nights will you be staying?: "))
@@ -313,6 +315,5 @@ class Hotel(DBbase):
 
 hotel_db = Hotel('hotel_bookings.db')
 populate_bookings('hotel_bookings.db')
-hotel_db.available_rooms()
 hotel_db.welcome()
 hotel_db.close_db()
