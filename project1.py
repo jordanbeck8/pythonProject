@@ -35,13 +35,13 @@ class Hotel(DBbase):
                                 );
                                 
                                 CREATE TABLE IF NOT EXISTS reservations (
-                                        reservation_id INTEGER PRIMARY KEY,
-                                        booking_id INTEGER,
-                                        last_name TEXT NOT NULL,
-                                        first_name TEXT NOT NULL, 
-                                        billing_zip INTEGER NOT NULL,
-                                        date_of_birth DATE,
-                                        FOREIGN KEY (booking_id) REFERENCES bookings(id)
+                                    reservation_id INTEGER PRIMARY KEY,
+                                    booking_id INTEGER,
+                                    last_name TEXT NOT NULL,
+                                    first_name TEXT NOT NULL, 
+                                    billing_zip INTEGER NOT NULL,
+                                    date_of_birth DATE,
+                                    FOREIGN KEY (booking_id) REFERENCES bookings(id)
                                 );
                             """)
 
@@ -135,8 +135,9 @@ class Hotel(DBbase):
             print("=" * 47)
 
     #functionality used in the next method after booking is confirmed
-    def print_receipt(self, room_type, check_in, check_out, total_cost):
+    def print_receipt(self, name, room_type, check_in, check_out, total_cost):
         print("\nReceipt:")
+        print(f"Name: {name}")
         print(f"Room Type: {room_type}")
         print(f"Check-in Date: {check_in}")
         print(f"Check-out Date: {check_out}")
@@ -175,18 +176,32 @@ class Hotel(DBbase):
                         self.get_cursor.execute("INSERT INTO bookings (room_type, check_in, check_out) VALUES (?, ?, ?)",
                                                 (room_type, check_in, check_out_date.strftime("%Y-%m-%d")))
                         self.get_connection.commit()
+                        booking_id = self.get_cursor.lastrowid
+
                         print(f"\nBooking successful! The {room_type} room has been booked from {check_in} to {check_out_date.strftime('%Y-%m-%d')}.")
                         print(f"Your total cost will be: ${total_cost:.2f}")
-                        receipt_request = input("Would you like a receipt? (Y/N): ").lower()
 
-                        #prints the details of the user's booking for them in the console, reused in the next section if initial date isn't available
+                        # Collect user information for the reservation
+                        first_name = input("Enter your first name: ")
+                        last_name = input("Enter your last name: ")
+                        billing_zip = int(input("Enter your billing ZIP code: "))
+                        date_of_birth = input("Enter your date of birth (YYYY-MM-DD): ")
+                        date_of_birth = datetime.datetime.strptime(date_of_birth, "%Y-%m-%d").date()
+
+                        # Add reservation to the reservations table
+                        self.get_cursor.execute("""
+                            INSERT INTO reservations (booking_id, last_name, first_name, date_of_birth, billing_zip) 
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (booking_id, last_name, first_name, date_of_birth, billing_zip))
+                        self.get_connection.commit()
+
+                        print(f"Reservation created for {first_name} {last_name}.")
+                        receipt_request = input("Would you like a receipt? (Y/N): ").lower()
                         if receipt_request == 'y':
-                            self.print_receipt(room_type, check_in, check_out_date.strftime("%Y-%m-%d"), total_cost)
-                        elif receipt_request == 'n':
-                            print("Thank you, we look forward to seeing you!")
+                            name = first_name + " " + last_name
+                            self.print_receipt(name, room_type, check_in, check_out_date.strftime("%Y-%m-%d"), total_cost)
                         break
 
-                #error handling for unavailable rooms
                     #if the original requested date isn't available, this finds the next open date for that specific room
                     else:
                         next_available_date, available_count = self.find_next_available_date(room_type, check_in, nights)
@@ -204,22 +219,26 @@ class Hotel(DBbase):
                             self.get_cursor.execute("INSERT INTO bookings (room_type, check_in, check_out) VALUES (?, ?, ?)",
                                                     (room_type, next_available_date, check_out_date.strftime("%Y-%m-%d")))
                             self.get_connection.commit()
-                            print(f"\nBooking successful! Your {room_type} room has been reserved from {next_available_date} to {check_out_date.strftime('%Y-%m-%d')}.")
-                            print(f"Your total cost will be: ${total_cost:.2f}")
+                            booking_id = self.get_cursor.lastrowid
+
+                            first_name = input("Enter your first name: ")
+                            last_name = input("Enter your last name: ")
+                            billing_zip = int(input("Enter your billing ZIP code: "))
+                            date_of_birth = input("Enter your date of birth (YYYY-MM-DD): ")
+                            date_of_birth = datetime.datetime.strptime(date_of_birth, "%Y-%m-%d").date()
+
+                            # Insert reservation into reservations table
+                            self.get_cursor.execute("""
+                                INSERT INTO reservations (booking_id, last_name, first_name, date_of_birth, billing_zip) 
+                                VALUES (?, ?, ?, ?, ?)
+                            """, (booking_id, last_name, first_name, date_of_birth, billing_zip))
+                            self.get_cursor.execute()
+
+                            print(f"\nReservation created for {first_name} {last_name}.")
                             receipt_request = input("Would you like a receipt? (Y/N): ").lower()
                             if receipt_request == 'y':
                                 self.print_receipt(room_type, next_available_date, check_out_date.strftime("%Y-%m-%d"), total_cost)
                             break
-
-                        else:
-                            #error handling for booking if the system is full that day
-                            available_rooms_on_date = self.find_available_rooms_on_date(next_available_date, nights)
-                            if available_rooms_on_date:
-                                print("Other available rooms on that date:")
-                                for available_room, count in available_rooms_on_date.items():
-                                    print(f"{available_room}: {count} available")
-                            else:
-                                print("No other rooms available on that date.")
 
                 #error handling for room type and date entered
                 else:
