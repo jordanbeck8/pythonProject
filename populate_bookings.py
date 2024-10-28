@@ -4,6 +4,7 @@ import random
 import csv
 import populate_reservations as populate_reservations
 
+
 def populate_bookings(DBbase):
     conn = sqlite3.connect(DBbase)
     cursor = conn.cursor()
@@ -13,10 +14,10 @@ def populate_bookings(DBbase):
         next(csv_reader)
 
         for row in csv_reader:
-            reservation_id, booking_id, last_name, first_name, billing_zip, date_of_birth = row
-            cursor.execute('''INSERT OR REPLACE INTO reservations (reservation_id, booking_id, last_name, first_name, billing_zip, date_of_birth) 
+            reservation_id, booking_id, lname, fname, zip, DOB = row
+            cursor.execute('''INSERT OR REPLACE INTO reservations (reservation_id, booking_id, last_name, first_name, zip, DOB) 
                             VALUES (?, ?, ?, ?, ?, ?)''', 
-                            (int(reservation_id), int(booking_id), last_name, first_name, int(billing_zip), date_of_birth))
+                            (int(reservation_id), int(booking_id), lname, fname, int(zip), DOB))
 
     room_types = ["BASIC", "FAMILY", "SUITE", "PENTHOUSE"]
     days_to_book = 30
