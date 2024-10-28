@@ -53,21 +53,38 @@ class Hotel(DBbase):
                                         (room_type, column['total_rooms'], column['available'], column['rate']))
             self.get_connection.commit()
 
-    def add_reservation(self, booking_id, last_name, first_name,DOB, zip):
-            try:
-                # Insert reservation details into the reservations table
-                self.get_cursor.execute("""
-                    INSERT INTO reservations (booking_id, last_name, first_name, DOB,zip) 
-                    VALUES (?, ?, ?, ?, ?)
-                """, (booking_id, last_name, first_name, DOB, zip))
-                self.get_connection.commit()
+    def search_reservation(self):
+        reserved = int(input("Enter your Reservation ID: "))
+        self.get_cursor.execute("""
+                                SELECT r.id AS room_id, r.room_type 
+                                FROM reservations res
+                                JOIN bookings b ON res.booking_id = b.id
+                                JOIN rooms r ON b.room_type = r.room_type 
+                                WHERE res.reservation_id = ?;
+                                """, (reserved,))
+        
+        results = self.get_cursor.fetchall()
+        
+        if results:
+            for row in results:
+                print(f"Room ID: {row[0]}, Room Type: {row[1]}")
+        else:
+            print("No reservations found for that ID.")
 
-                print(f"Reservation added successfully for {first_name} {last_name}.")
-                return self.get_cursor.lastrowid 
+    def delete_reservation(self):
+        reserved = int(input("Enter your Reservation ID: "))
+        self.get_cursor.execute("""
+            DELETE FROM reservations 
+            WHERE reservation_id = ?;
+        """, (reserved,))
 
-            except Exception as e:
-                print(f"An error occurred while adding the reservation: {e}")
-                return None
+        self.get_connection.commit()
+        if self.get_cursor.rowcount > 0:
+            print(f"Reservation ID {reserved} has been deleted.")
+        else:
+            print("No reservation found with that ID.")
+
+
 
     #pulls open rooms (used in booking and in initial availability display)
     def load_rooms(self):
